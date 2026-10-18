@@ -359,6 +359,10 @@ pub fn manifest() -> R<(El, Vec<El>, Vec<El>)> {
     Ok((rec.find("partitions/partition").unwrap().clone(), all("files/file"), all("manualfiles/file")))
 }
 
+pub fn volume_label(part: &El) -> String {
+    part.attr("label").replace(' ', "").to_uppercase().chars().take(11).collect() // FormatUSB strips spaces from P0's label
+}
+
 pub fn local(f: &El) -> PathBuf {
     files_dir().join(basename(f.attr("name")))
 }
@@ -577,7 +581,7 @@ pub fn build(disk: &str) -> R {
         return Err(format!("stick too small: {:.1} GB, need {:.1} GB", info.size as f64 / 1e9, need as f64 / 1e9).into());
     }
 
-    let label: String = part.attr("label").replace(' ', "").to_uppercase().chars().take(11).collect(); // FormatUSB strips spaces
+    let label = volume_label(&part);
     println!("ERASING {disk} ({}, {:.1} GB) -> MBR + FAT32 \"{label}\"", info.name, info.size as f64 / 1e9);
     let mnt = erase(disk, &label)?;
     File::create(mnt.join(".metadata_never_index"))?;

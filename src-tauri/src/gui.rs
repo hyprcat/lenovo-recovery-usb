@@ -256,11 +256,14 @@ async fn status() -> Value {
     let order = dds::order_root().ok().map(|dr| {
         let mut o: serde_json::Map<String, Value> = dr.attrs.iter().map(|(k, v)| (k.clone(), v.as_str().into())).collect();
         o.extend([("files".into(), files.len().into()), ("total".into(), total.into()), ("done".into(), done.into())]);
+        o.insert("os".into(), dr.find("recovery").map_or("", |r| r.attr("os")).into());
         o
     });
     let have_rmf = usb::has_rmf();
     let problem = if have_rmf { usb::layout_problem() } else { None };
-    let ready = have_rmf && problem.is_none() && usb::manifest().is_ok_and(|(_, fs, _)| fs.iter().all(|f| usb::local(f).exists()));
+    let man = if have_rmf && problem.is_none() { usb::manifest().ok() } else { None };
+    let ready = man.as_ref().is_some_and(|(_, fs, _)| fs.iter().all(|f| usb::local(f).exists()));
+    let layout = man.as_ref().map(|(p, _, _)| json!({"label": usb::volume_label(p), "format": p.attr("format")}));
     let tools: Vec<&str> = if MAC { vec![] } else { ["lsblk", "sfdisk", "wipefs", "mkfs.vfat", "pkexec"].into_iter().filter(|t| !which(t)).collect() };
     let _ = std::fs::create_dir_all(files_dir());
     let free = nix::sys::statvfs::statvfs(&files_dir()).map(|s| s.blocks_available() as f64 * s.fragment_size() as f64).unwrap_or(0.0);
@@ -268,7 +271,7 @@ async fn status() -> Value {
     json!({
         "mac": MAC, "signedIn": sess.get("token").and_then(Value::as_str).is_some_and(|t| !t.is_empty()),
         "orders": sess.get("orders").cloned().unwrap_or(json!([])), "order": order, "orderId": sess.get("orderId"),
-        "layoutProblem": problem, "ready": ready, "missingTools": tools, "free": free, "dataDir": data(),
+        "layoutProblem": problem, "layout": layout, "version": env!("CARGO_PKG_VERSION"), "ready": ready, "missingTools": tools, "free": free, "dataDir": data(),
         "job": { "name": job.name, "running": job.running, "ok": job.ok, "cur": job.cur,
                  "lines": job.lines[job.lines.len().saturating_sub(200)..] },
     })
@@ -287,6 +290,11 @@ fn open_url(url: String) -> Result<(), String> {
     Command::new(if MAC { "open" } else { "xdg-open" }).arg(url).spawn().map(|_| ()).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn quit(app: AppHandle) {
+    app.exit(0);
+}
+
 fn stop_child() {
     let pid = CHILD.load(Ordering::SeqCst);
     if pid != 0 {
@@ -296,7 +304,7 @@ fn stop_child() {
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![status, disks, act, open_url])
+        .invoke_handler(tauri::generate_handler![status, disks, act, open_url, quit])
         .on_window_event(|w, e| {
             if w.label() == "main" && matches!(e, WindowEvent::Destroyed) {
                 w.app_handle().exit(0); // closing the app window quits, even with a sign-in window open

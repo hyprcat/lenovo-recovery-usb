@@ -3,5 +3,5 @@
   "identifier": "main",
   "description": "The app window. The Lenovo sign-in window gets nothing.",
   "windows": ["main"],
-  "permissions": ["allow-status", "allow-disks", "allow-act", "allow-open-url"]
+  "permissions": ["allow-status", "allow-disks", "allow-act", "allow-open-url", "allow-quit"]
 }

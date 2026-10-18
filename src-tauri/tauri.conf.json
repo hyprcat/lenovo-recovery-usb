@@ -12,10 +12,10 @@
       {
         "label": "main",
         "title": "Recovery USB Maker",
-        "width": 720,
-        "height": 900,
-        "minWidth": 460,
-        "minHeight": 560
+        "width": 480,
+        "height": 540,
+        "minWidth": 420,
+        "minHeight": 500
       }
     ],
     "security": {

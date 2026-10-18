@@ -5,117 +5,198 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Recovery USB Maker</title>
 <style>
-:root {
-  --bg: #f5f6f8; --card: #fff; --text: #1c1e21; --muted: #646a73; --line: #e2e5ea;
-  --accent: #2d6cdf; --accent-text: #fff; --ok: #1f8a4c; --warn: #a86400; --bad: #c62f2f; --bar: #e8ebf0;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #15171a; --card: #1e2125; --text: #e8eaed; --muted: #9aa0a8; --line: #2e3238;
-          --accent: #5b8ff0; --accent-text: #0d1117; --ok: #4cc27f; --warn: #e0a440; --bad: #f06a6a; --bar: #2b2f35;
-          color-scheme: dark; }
-}
+/* Classic Windows-utility look (Rufus-style), on purpose the same everywhere */
+:root { color-scheme: light; --line: #a0a0a0; --rule: #d4d4d4; --muted: #555; --bad: #c00000; --fill: #06b025; }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, Cantarell, sans-serif; }
-main { max-width: 660px; margin: 0 auto; padding: 28px 16px 48px; }
-header { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
-header svg { flex: none; }
-h1 { font-size: 20px; margin: 0; }
-.sub { color: var(--muted); font-size: 13px; }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
-.card.locked { opacity: .55; }
-.card.locked .body { display: none; }
-.head { display: flex; align-items: center; gap: 10px; }
-.num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600;
-       border: 1.5px solid var(--line); color: var(--muted); flex: none; }
-.active .num { border-color: var(--accent); color: var(--accent); }
-.done .num { background: var(--ok); border-color: var(--ok); color: var(--card); }
-h2 { font-size: 16px; margin: 0; flex: 1; }
-.chip { font-size: 12px; color: var(--muted); }
-.body { margin: 10px 0 0 36px; }
-p { margin: 0 0 10px; }
-.muted { color: var(--muted); font-size: 13px; }
-a { color: var(--accent); }
-button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer;
-         background: var(--accent); color: var(--accent-text); }
-button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
-button.danger { background: var(--bad); color: #fff; }
-button:disabled { opacity: .45; cursor: default; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
-.pick { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
-.pick input { margin-top: 4px; }
-.pick.off { cursor: default; opacity: .6; }
-.pick b { display: block; font-weight: 600; }
-progress { display: block; width: 100%; height: 8px; margin: 8px 0 4px; appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: var(--bar); }
-progress::-webkit-progress-bar { background: var(--bar); }
-progress::-webkit-progress-value { background: var(--accent); }
-.msg { border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.msg.bad { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
-.msg.warn { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
-.msg.ok { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
-.now { font: 12px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.4em; }
-details { margin-top: 12px; }
-summary { cursor: pointer; color: var(--muted); font-size: 13px; }
-pre { font: 12px/1.45 ui-monospace, Menlo, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
-      padding: 10px; max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
-ol.boot { margin: 6px 0 0; padding-left: 20px; }
-.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
-        border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; margin-right: 6px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-footer { color: var(--muted); font-size: 12px; margin-top: 24px; overflow-wrap: anywhere; }
-code { font: 12px ui-monospace, Menlo, monospace; background: var(--bar); padding: 1px 5px; border-radius: 4px; }
+html, body { height: 100%; }
+body { margin: 0; background: #f0f0f0; color: #000; font: 12px/1.35 "Segoe UI", Tahoma, "DejaVu Sans", Verdana, sans-serif;
+       -webkit-user-select: none; user-select: none; cursor: default; }
+main { min-height: 100%; display: flex; flex-direction: column; padding: 2px 14px 0; }
+h2 { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; margin: 10px 0 2px; }
+h2::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+label { display: block; margin: 6px 0 2px; }
+select, input, button { font: inherit; margin: 0; color: #000; }
+select, input[type=text] { width: 100%; min-width: 0; height: 23px; border: 1px solid #7a7a7a; border-radius: 0; background-color: #fff; padding: 0 4px; outline: none; }
+select { -webkit-appearance: none; appearance: none; padding-right: 22px; background-repeat: no-repeat; background-position: right 7px center;
+         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0h9L4.5 5z' fill='%23000'/%3E%3C/svg%3E"); }
+select:focus, input:focus { border-color: #0078d7; }
+select:disabled, input:disabled { background-color: #f0f0f0; border-color: #ccc; color: #838383;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0h9L4.5 5z' fill='%23a0a0a0'/%3E%3C/svg%3E"); }
+input:disabled { background-image: none; }
+button { min-height: 23px; padding: 1px 12px; border: 1px solid #adadad; border-radius: 0; background: #e1e1e1; }
+button:hover:not(:disabled) { background: #e5f1fb; border-color: #0078d7; }
+button:active:not(:disabled) { background: #cce4f7; border-color: #005499; }
+button:focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+button:disabled { background: #ccc; border-color: #bfbfbf; color: #838383; }
+.row { display: flex; gap: 6px; align-items: center; }
+.row > :first-child { flex: 1; min-width: 0; }
+.row button { flex: none; min-width: 92px; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; }
+.kv { display: grid; grid-template-columns: 104px minmax(0, 1fr) auto; gap: 4px 8px; align-items: center; margin-top: 6px; }
+.kv > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kv > span:nth-child(3n+1) { color: var(--muted); }
+.kv button { min-width: 92px; }
+.hint { margin-top: 5px; color: var(--muted); overflow-wrap: anywhere; }
+.hint:empty { display: none; }
+.hint.bad { color: var(--bad); }
+a { color: #0066cc; text-decoration: underline; cursor: pointer; }
+.bar { position: relative; height: 23px; margin-top: 6px; border: 1px solid #bcbcbc; background: #e6e6e6; overflow: hidden; }
+.bar .fill { position: absolute; top: 0; bottom: 0; left: 0; width: 0; background: var(--fill); }
+.bar.failed .fill { background: #e81123; }
+.bar.busy .fill { width: 25% !important; animation: slide 1.4s linear infinite; }
+@keyframes slide { from { left: -25%; } to { left: 100%; } }
+.bar span { position: absolute; inset: 0; display: grid; place-items: center; }
+.foot { display: flex; align-items: center; gap: 6px; margin: 10px 0 10px; }
+.foot .tools { flex: 1; display: flex; gap: 4px; }
+.foot .tools button { width: 28px; padding: 0; display: grid; place-items: center; }
+.foot .main { min-width: 88px; }
+svg { width: 14px; height: 14px; fill: none; stroke: #000; stroke-width: 1.4; }
+button:disabled svg { stroke: #838383; }
+.status { display: flex; gap: 8px; margin: auto -14px 0; padding: 3px 10px 4px; border-top: 1px solid #d7d7d7; background: #f0f0f0;
+          box-shadow: inset 0 1px #fff; }
+.status span:first-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status.bad span:first-child { color: var(--bad); }
+.status span:last-child { font-variant-numeric: tabular-nums; }
+#modal { position: fixed; inset: 0; display: grid; place-items: center; padding: 14px; background: rgba(0, 0, 0, .18); }
+#modal[hidden] { display: none; }
+.sheet { width: 100%; max-width: 400px; max-height: 100%; display: flex; flex-direction: column; background: #fff; border: 1px solid #888;
+         box-shadow: 2px 2px 12px rgba(0, 0, 0, .35); }
+.sheet .title { padding: 5px 10px; background: #fff; border-bottom: 1px solid #e5e5e5; }
+.sheet .body { display: flex; gap: 12px; padding: 14px 14px 6px; min-height: 0; flex: 1; }
+.sheet .body > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sheet .icon { width: 32px; height: 32px; flex: none; }
+.sheet h3 { margin: 0 0 8px; font-size: 13px; font-weight: bold; }
+.sheet p, .sheet ol { margin: 0 0 8px; }
+.sheet ol { padding-left: 18px; }
+.sheet .warn { font-weight: bold; }
+.sheet pre { flex: 1; min-height: 140px; max-height: 360px; overflow: auto; margin: 0 0 8px; padding: 6px; background: #fff; border: 1px solid #7a7a7a;
+             font: 11px/1.4 Consolas, Menlo, "DejaVu Sans Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere;
+             -webkit-user-select: text; user-select: text; }
+.sheet .btns { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 12px; background: #f0f0f0; border-top: 1px solid #dfdfdf; }
+.sheet .btns button { min-width: 80px; }
+.sheet .btns .left { margin-right: auto; }
+code { font: 11px Consolas, Menlo, "DejaVu Sans Mono", monospace; -webkit-user-select: text; user-select: text; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
 <main>
-  <header>
-    <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
-      <rect x="11" y="3" width="14" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-      <rect x="7" y="12" width="22" height="21" rx="4" fill="var(--accent)"/>
-      <path d="M18 17v8m-4-4 4 4 4-4" stroke="var(--accent-text)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <div>
-      <h1>Recovery USB Maker</h1>
-      <div class="sub">Make Lenovo factory-recovery media without a Windows PC. Unofficial, not affiliated with Lenovo.</div>
+  <h2>Drive Properties</h2>
+  <label for="disk">Device</label>
+  <select id="disk"></select>
+  <div class="two">
+    <div><label>Partition scheme</label><select disabled><option>MBR</option></select></div>
+    <div><label>Target system</label><select disabled><option>BIOS or UEFI</option></select></div>
+  </div>
+
+  <h2>Recovery Image</h2>
+  <label for="order">Lenovo recovery order</label>
+  <div class="row"><select id="order"></select><button data-do="login" id="signin">SIGN IN...</button></div>
+  <div class="kv">
+    <span>Order number</span><span id="orderId"></span><span></span>
+    <span>Laptop</span><span id="laptop"></span><span></span>
+    <span>Download size</span><span id="size"></span><span></span>
+    <span>Downloaded</span><span id="got"></span><button id="dl"></button>
+  </div>
+  <div class="hint" id="hint"></div>
+
+  <h2>Format Options</h2>
+  <div class="two">
+    <div><label>Volume label</label><input type="text" id="label" disabled></div>
+    <div><label>File system</label><select disabled><option id="fs">FAT32</option></select></div>
+  </div>
+
+  <h2>Status</h2>
+  <div class="bar" id="bar"><div class="fill" id="fill"></div><span id="state"></span></div>
+  <div class="foot">
+    <div class="tools">
+      <button data-do="about" title="About"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.3"/><path d="M8 7.2V11.2M8 4.6v1.2"/></svg></button>
+      <button data-do="log" title="Log"><svg viewBox="0 0 16 16"><path d="M3 4h10M3 8h10M3 12h7"/></svg></button>
     </div>
-  </header>
-  <div id="tools"></div>
-  <div id="err"></div>
-  <section class="card" id="s1"></section>
-  <section class="card" id="s2"></section>
-  <section class="card" id="s3"></section>
-  <section class="card" id="s4"></section>
-  <details id="log"><summary>Show details</summary><pre></pre></details>
-  <footer>Keep this window open while a step is running. Downloads resume if interrupted.<br><span id="where"></span></footer>
+    <button class="main" id="start" data-do="start">START</button>
+    <button class="main" data-do="close">CLOSE</button>
+  </div>
+  <div class="status" id="statusbar"><span id="status"></span><span id="clock">00:00:00</span></div>
 </main>
+<div id="modal" hidden><div class="sheet" id="sheet"></div></div>
 <script>
 const invoke = window.__TAURI__.core.invoke;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
 const gb = n => (n / 1e9).toFixed(1) + ' GB';
 const SITE = 'https://pcsupport.lenovo.com/lenovorecovery';
-const ISSUES = 'https://github.com/hyprcat/lenovo-recovery-usb/issues';
-let S = null, disks = [], pickOrder = null, pickDisk = null, err = '', lastDisks = 0, shown = '', hideDone = false, confirming = false;
+const REPO = 'https://github.com/hyprcat/lenovo-recovery-usb';
+const link = (url, text) => `<a data-href="${url}">${text}</a>`;
+let S = null, disks = [], lastDisks = 0, err = '', modal = null, doneShown = false, buildDisk = null;
+
+// Lenovo's OS codes, e.g. Win11HomeSLx64 -> Windows 11 Home Single Language (64-bit)
+function osName(code) {
+  const m = /^Win(\d+)([A-Za-z]*?)(x64|x86|ARM64)?$/i.exec(code || '');
+  if (!m) return code || 'Windows';
+  const ed = m[2].replace(/SL$/, ' Single Language').replace(/CN$/, ' China').replace(/([a-z])([A-Z])/g, '$1 $2').trim();
+  const arch = { x64: '64-bit', x86: '32-bit', arm64: 'ARM64' }[(m[3] || '').toLowerCase()];
+  return `Windows ${m[1]} ${ed}`.trim() + (arch ? ` (${arch})` : '');
+}
 
 async function act(name, arg) {
   err = '';
-  hideDone = false;
-  confirming = false;
+  doneShown = false;
+  closeModal();
+  if (name === 'build' || name === 'rawfix') buildDisk = arg;
   try { await invoke('act', { name, arg }); } catch (e) { err = String(e); }
   tick();
 }
 
-// buttons and links carry data-do / data-href; one listener each instead of inline handlers (CSP)
+// ---- message boxes ----
+const ICONS = {
+  warn: '<svg class="icon" viewBox="0 0 32 32"><path d="M16 3 30 28H2z" fill="#ffd200" stroke="#7a5c00"/><path d="M16 11v9M16 23.5v1.5" stroke="#000" stroke-width="2.6"/></svg>',
+  info: '<svg class="icon" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13.5" fill="#1f6fd0" stroke="#124a8c"/><path d="M16 14v9M16 9v1.5" stroke="#fff" stroke-width="2.6"/></svg>',
+  ok: '<svg class="icon" viewBox="0 0 32 32"><circle cx="16" cy="16" r="13.5" fill="#06b025" stroke="#04761a"/><path d="m10 16.5 4 4 8-9" stroke="#fff" stroke-width="2.6"/></svg>',
+};
+function openModal(kind, html, buttons, icon) {
+  modal = kind;
+  $('sheet').innerHTML = `<div class="title">Recovery USB Maker</div><div class="body">${icon ? ICONS[icon] : ''}<div>${html}</div></div>` +
+    '<div class="btns">' + buttons.map(([label, todo, cls]) => `<button data-do="${todo}" class="${cls || ''}">${label}</button>`).join('') + '</div>';
+  $('modal').hidden = false;
+  const def = $('sheet').querySelector('.btns [data-do=dismiss]') || $('sheet').querySelector('.btns button:last-child');
+  def.focus();  // Cancel on anything destructive
+}
+function closeModal() { modal = null; $('modal').hidden = true; }
+function logText() { return S ? S.job.lines.concat(S.job.cur ? [S.job.cur] : []).join('\n') || 'Nothing yet.' : ''; }
+
 const DO = {
   login: () => act('login'),
-  order: () => act('order', pickOrder),
+  load: () => act('order', $('order').value),
   download: () => act('download'),
-  ask: () => { confirming = true; render(); },
-  cancel: () => { confirming = false; render(); },
-  erase: () => act('build', pickDisk),
-  rawfix: () => act('rawfix', pickDisk),
-  cleanup: () => act('cleanup'),
-  another: () => { hideDone = true; render(); },
+  cleanup: () => openModal('cleanup', `<p>Delete the downloaded recovery files (${gb(S.order ? S.order.total : 0)})?</p>` +
+    `<p>You'd have to download them again to make another stick.</p>`, [['Delete', 'cleanupYes'], ['Cancel', 'dismiss']], 'warn'),
+  cleanupYes: () => act('cleanup'),
+  start: () => {
+    const d = pickedDisk();
+    if (!d) return;
+    if (retryable()) return act('rawfix', d.id);
+    openModal('erase', `<p class="warn">WARNING: ALL DATA ON DEVICE '${esc(d.name)} (${esc(d.id)}) [${gb(d.size)}]' WILL BE DESTROYED.</p>` +
+      `<p>To continue with this operation, click OK. To quit click CANCEL.</p>`, [['OK', 'erase'], ['Cancel', 'dismiss']], 'warn');
+  },
+  erase: () => act('build', pickedDisk().id),
+  close: () => S && S.job.running
+    ? openModal('quit', '<p>A step is still running. Quit anyway?</p><p>Downloads resume next time. A half-written USB stick has to be made again.</p>',
+        [['Quit', 'quit'], ['Cancel', 'dismiss']], 'warn')
+    : invoke('quit'),
+  quit: () => invoke('quit'),
+  dismiss: closeModal,
+  log: () => {
+    openModal('log', `<h3>Log</h3><pre id="logpre">${esc(logText())}</pre>`, [['Close', 'dismiss']]);
+    $('logpre').scrollTop = $('logpre').scrollHeight;
+  },
+  about: () => {
+    const files = S && S.order && S.order.done > 0 && !S.job.running;
+    openModal('about', `<h3>Recovery USB Maker ${esc(S ? S.version : '')}</h3>
+      <p>Creates the factory-recovery USB stick for a Lenovo laptop, like Lenovo's Windows-only USB Recovery Creator.</p>
+      <p>Unofficial. Not affiliated with or endorsed by Lenovo. It uses your own Lenovo ID and recovery order with Lenovo's
+      recovery service. MIT licensed: ${link(REPO, 'source code and help')}.</p>
+      <p>Downloaded files are kept in<br><code>${esc(S ? S.dataDir : '')}</code></p>`,
+      (files ? [['Delete downloaded files', 'cleanup', 'left']] : []).concat([['Close', 'dismiss']]), 'info');
+  },
 };
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-do],[data-href]');
@@ -124,132 +205,157 @@ document.addEventListener('click', e => {
   if (b.dataset.href) invoke('open_url', { url: b.dataset.href });
   else DO[b.dataset.do]();
 });
-document.addEventListener('change', e => {
-  if (e.target.name === 'order') pickOrder = e.target.value;
-  if (e.target.name === 'disk') { pickDisk = e.target.value; confirming = false; }
-  render();
-});
+document.addEventListener('change', () => render());
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal && modal !== 'done') closeModal(); });
 
-const link = (url, text) => `<a href="${url}" data-href="${url}">${text}</a>`;
-function card(id, n, title, state, chip, body) {
-  const el = $(id);
-  el.className = 'card ' + state;
-  el.innerHTML = `<div class="head"><div class="num">${state === 'done' ? '✓' : n}</div><h2>${title}</h2><span class="chip">${chip || ''}</span></div>` +
-    `<div class="body">${body}</div>`;
+// ---- state ----
+function pickedDisk() { return disks.find(d => d.id === $('disk').value && !d.problem); }
+function lastLine(job) { return job.cur || job.lines.filter(l => l.trim()).slice(-1)[0] || ''; }
+function friendly(line) {  // a step's progress output, in words for the status bar
+  let m;
+  if ((m = line.match(/^\[copy \d+\/\d+\]\s*(\S+)/))) return `Copying ${m[1]}`;
+  if ((m = line.match(/^\[verify \d+\/\d+\]\s*(\S+)/))) return `Verifying ${m[1]}`;
+  if ((m = line.match(/^\[(\d+)\/(\d+)\] OK(?: \(already\))? (\S+)/))) return `Checked ${m[3]} (file ${m[1]} of ${m[2]})`;
+  if ((m = line.match(/^\[(\d+)\/(\d+)\] (\S+) ([\d.]+)\/([\d.]+) GB/))) return `Downloading ${m[3]} (file ${m[1]} of ${m[2]})`;
+  return line.replace(/^\$ /, '');
 }
-function tail(job, n = 4) {
-  return job.lines.filter(l => l.trim()).slice(-n).join('\n');
+function retryable() {  // the files are on the stick and only the boot-sector step failed
+  const j = S.job, d = pickedDisk();
+  return j.name === 'build' && j.ok === false && j.lines.some(l => l.includes('Files written and verified')) && d && d.id === buildDisk;
 }
-function failed(name) { return S.job.name === name && S.job.ok === false ? `<div class="msg bad">${esc(tail(S.job))}</div>` : ''; }
-function running(name) { return S.job.running && S.job.name === name; }
-function now(job) { return `<div class="now"><span class="spin"></span>${esc(job.cur || job.lines[job.lines.length - 1] || 'Working...')}</div>`; }
-const off = cond => cond ? 'disabled' : '';
+function setOptions(sel, opts, want) {
+  const key = JSON.stringify(opts);
+  if (sel.dataset.key !== key) {
+    const keep = sel.value;
+    sel.dataset.key = key;
+    sel.innerHTML = opts.map(o => `<option value="${esc(o.value)}" ${o.disabled ? 'disabled' : ''}>${esc(o.text)}</option>`).join('');
+    const pick = [keep, want].find(v => v && opts.some(o => o.value === v && !o.disabled)) || (opts.find(o => !o.disabled) || {}).value;
+    if (pick !== undefined) sel.value = pick;
+    else sel.selectedIndex = 0;  // only a disabled placeholder: show it
+  }
+}
+function buildProgress(job) {  // overall % and a short label, from the build's output
+  const all = job.lines.concat(job.cur ? [job.cur] : []);
+  for (let i = all.length - 1; i >= 0; i--) {
+    const l = all[i], m = l.match(/\[(copy|verify) (\d+)\/(\d+)\]/);
+    if (m) return m[1] === 'copy' ? [6 + 60 * m[2] / m[3], `Copying files: ${m[2]} of ${m[3]}`] : [70 + 26 * m[2] / m[3], `Verifying files: ${m[2]} of ${m[3]}`];
+    if (l.startsWith('Extracting')) return [67, 'Extracting archive...'];
+    if (l.startsWith('Files written') || l.startsWith('Patch applied')) return [97, 'Writing boot record...'];
+    if (l.startsWith('ERASING')) return [4, 'Formatting...'];
+    if (l.startsWith('Testing')) return [2, 'Checking archives...'];
+  }
+  return [1, 'Preparing...'];
+}
 
 function render() {
-  const job = S.job, busy = job.running, o = S.order;
-  const hasOrder = o && o.files > 0;
-  const built = job.name === 'build' && job.ok === true && !hideDone;
+  const job = S.job, busy = job.running, o = S.order, hasOrder = !!(o && o.files > 0);
+  const failed = job.ok === false && !busy, tailMsg = failed ? lastLine(job) : '';
 
-  $('tools').innerHTML = S.missingTools.length ? `<div class="msg warn">Missing: ${esc(S.missingTools.join(', '))}. Install them first: ` +
-    '<code>sudo apt install dosfstools util-linux pkexec</code> · <code>sudo dnf install dosfstools util-linux polkit</code> · ' +
-    '<code>sudo pacman -S dosfstools util-linux polkit</code></div>' : '';
+  // drive
+  const dopts = disks.map(d => ({ value: d.id, text: `${d.name} (${d.id}) [${gb(d.size)}]` + (d.problem ? ` - ${d.problem}` : ''), disabled: !!d.problem }));
+  setOptions($('disk'), dopts.length ? dopts : [{ value: '', text: '', disabled: true }]);
+  $('disk').disabled = busy;
 
-  // 1. sign in
-  let b = '';
-  if (running('login')) b = now(job);
-  else if (S.signedIn && S.orders.length) b = `<p>Signed in. Found ${S.orders.length} recovery order${S.orders.length > 1 ? 's' : ''}.</p>` +
-    `<div class="row"><button class="secondary" data-do="login" ${off(busy)}>Sign in again</button></div>`;
-  else if (S.ready || hasOrder) b = `<p class="muted">Not needed right now: your order is already here. Sign in only to fetch a different order.</p>` +
-    `<div class="row"><button class="secondary" data-do="login" ${off(busy)}>Sign in with Lenovo ID</button></div>`;
+  // recovery image
+  const known = S.orders.map(x => ({ value: x.id, text: osName(x.os) }));
+  const orders = known.length ? known : o ? [{ value: o.id, text: osName(o.os) }]
+    : [{ value: '', text: S.signedIn ? '(no recovery orders on this Lenovo ID)' : '(sign in to see your recovery orders)', disabled: true }];
+  setOptions($('order'), orders, S.orderId);
+  $('order').disabled = busy || orders.length < 2;
+  $('signin').disabled = busy;
+  const sel = $('order').value, needLoad = !!sel && (!o || sel !== o.id);
+  $('orderId').textContent = needLoad ? sel : o ? o.id : '-';
+  const info = S.orders.find(x => x.id === (sel || (o && o.id)));
+  $('laptop').textContent = info ? `${info.machineType}, serial number ${info.serialNumber}` : '-';
+  $('size').textContent = hasOrder && !needLoad ? `${gb(o.total)} (${o.files} files)` : '-';
+  $('got').textContent = needLoad || !hasOrder ? '-' : S.ready ? `${gb(o.total)}, all files verified` :
+    busy && job.name === 'download' ? `${gb(o.done)} of ${gb(o.total)}` : o.done ? `${gb(o.done)} of ${gb(o.total)} (paused)` : 'Not started';
+  const dl = $('dl');
+  dl.hidden = !needLoad && (S.ready || !hasOrder);
+  dl.textContent = needLoad ? 'LOAD ORDER' : o && o.done ? 'RESUME' : 'DOWNLOAD';
+  dl.dataset.do = needLoad ? 'load' : 'download';
+  dl.disabled = busy || (!needLoad && !!S.layoutProblem);
+  const left = hasOrder ? o.total - o.done : 0;
+  let hint = '';
+  if (busy && job.name === 'login') hint = 'Sign in with your Lenovo ID in the window that opened.';
+  else if (o && o.code && o.code !== '000') hint = `Lenovo says: ${esc(o.message)} (code ${esc(o.code)}). The order may have expired: ${link(SITE, 'request a new one')}.`;
+  else if (S.layoutProblem) hint = `Not supported yet: ${esc(S.layoutProblem)}. Please ${link(REPO + '/issues', 'open an issue')}.`;
+  else if (hasOrder && !S.ready && S.free < left + 1e9) hint = `Not enough free disk space: ${gb(left)} still to download, ${gb(S.free)} free.`;
+  else if (!hasOrder && !S.orders.length && !busy) hint = `No recovery order yet? It's free: ${link(SITE, 'request one from Lenovo')} with your laptop's serial number.`;
+  $('hint').innerHTML = hint;
+  $('hint').className = 'hint' + (hint && !hint.startsWith('No recovery') && !busy ? ' bad' : '');
+
+  // format options
+  $('fs').textContent = S.layout ? S.layout.format.toUpperCase() : 'FAT32';
+  $('label').value = S.layout ? S.layout.label : '';
+
+  // status
+  const d = pickedDisk(), canStart = S.ready && !!d && !busy && !S.layoutProblem;
+  $('start').disabled = !canStart;
+  $('start').textContent = retryable() ? 'RETRY' : 'START';
+  const done = job.name === 'build' && job.ok === true && !busy;
+  let pct = 0, state = '', cls = '';
+  if (busy && job.name === 'download' && hasOrder) [pct, state] = [100 * o.done / o.total, `Downloading: ${(100 * o.done / o.total).toFixed(1)}%`];
+  else if (busy && job.name === 'build') [pct, state] = buildProgress(job);
+  else if (busy) [cls, state] = ['busy', { login: 'Signing in...', order: 'Loading order...', cleanup: 'Deleting files...' }[job.name] || 'Working...'];
+  else if (done) [pct, state] = [100, 'READY'];
+  else if (failed) [pct, state, cls] = [100, 'FAILED', 'failed'];
+  else if (canStart) [pct, state] = [100, 'READY'];
+  $('bar').className = 'bar ' + cls;
+  $('fill').style.width = pct.toFixed(1) + '%';
+  $('state').textContent = state;
+
+  let status = '';
+  if (S.missingTools.length) status = `Missing system tools: ${S.missingTools.join(', ')} (install dosfstools, util-linux and polkit)`;
+  else if (err) status = err;
+  else if (busy) status = friendly(lastLine(job)) || 'Working...';
+  else if (failed) status = tailMsg + (retryable() ? ' The files are on the stick: click RETRY to finish.' : '');
+  else if (!hasOrder) status = 'Sign in and choose your recovery order';
+  else if (!S.ready) status = 'Download the recovery files';
   else {
-    b = `<p>Sign in with the Lenovo ID you used to order recovery media for your laptop.</p>` +
-      `<p class="muted">No order yet? It's free: request one at ${link(SITE, SITE.replace('https://', ''))} with the serial number on the bottom of the laptop, then come back and sign in.</p>`;
-    if (S.signedIn && job.name === 'login' && job.ok) b += `<div class="msg warn">This Lenovo ID has no recovery orders yet. Request one at the link above, then sign in again.</div>`;
-    b += `<div class="row"><button data-do="login" ${off(busy)}>Sign in with Lenovo ID</button></div>`;
+    const n = disks.filter(x => !x.problem).length;
+    status = n ? `${n} device${n > 1 ? 's' : ''} found` : 'Plug in a USB stick of 32 GB or more';
   }
-  b += failed('login');
-  const step = built ? 5 : S.ready ? 4 : hasOrder ? 3 : S.orders.length ? 2 : 1;
-  const st = n => n < step ? 'done' : n === step ? 'active' : 'locked';
-  card('s1', 1, 'Sign in to Lenovo', S.signedIn && S.orders.length || step > 1 ? 'done' : 'active', '', b);
+  $('status').textContent = status;
+  $('statusbar').className = 'status' + (S.missingTools.length || err || failed ? ' bad' : '');
 
-  // 2. order
-  if (pickOrder === null && S.orders.length) pickOrder = S.orderId || S.orders[0].id;
-  b = S.orders.map(x => `<label class="pick"><input type="radio" name="order" value="${esc(x.id)}" ${x.id === pickOrder ? 'checked' : ''}>` +
-    `<span><b>${esc(x.machineType)} · serial ${esc(x.serialNumber)}</b><span class="muted">${esc(x.os)} · ordered ${esc((x.dateTime || '').slice(0, 10))}</span></span></label>`).join('');
-  if (!S.orders.length && hasOrder) b = `<p class="muted">Using order ${esc(o.id)}.</p>`;
-  if (running('order')) b += now(job);
-  else if (S.orders.length) b += `<div class="row"><button data-do="order" ${off(busy)}>${hasOrder ? 'Reload order' : 'Use this order'}</button></div>`;
-  if (o && o.code !== '000' && !running('order')) b += `<div class="msg bad">Lenovo says: ${esc(o.message)} (code ${esc(o.code)}). The order may have expired or been used up. Request a new one at ${link(SITE, "Lenovo's recovery site")}.</div>`;
-  if (S.layoutProblem) b += `<div class="msg bad">Can't build this one yet: ${esc(S.layoutProblem)}. Please ${link(ISSUES, 'open an issue')} with your laptop model.</div>`;
-  b += failed('order');
-  card('s2', 2, 'Choose your recovery order', st(2), hasOrder ? `${o.files} files · ${gb(o.total)}` : '', b || '<p class="muted">Sign in first.</p>');
-
-  // 3. download
-  b = '';
-  if (hasOrder) {
-    const pct = o.total ? 100 * o.done / o.total : 0, left = o.total - o.done;
-    b += `<progress max="100" value="${pct.toFixed(1)}"></progress><div class="muted">${gb(o.done)} of ${gb(o.total)}` +
-      `${S.ready ? ' · all files verified' : ''}</div>`;
-    if (!S.ready && S.free < left + 1e9) b += `<div class="msg warn">Not enough free disk space: ${gb(left)} still to download, ${gb(S.free)} free.</div>`;
-    if (running('download')) b += now(job);
-    else if (!S.ready) b += `<div class="row"><button data-do="download" ${off(busy || S.layoutProblem)}>${o.done ? 'Resume download' : 'Download'}</button>` +
-      `<span class="muted">Every file is checked against Lenovo's SHA-256.</span></div>`;
-  } else if (S.ready) b = '<p>Files already downloaded and verified.</p>';
-  b += failed('download') + failed('cleanup');
-  card('s3', 3, 'Download the recovery files', st(3), S.ready ? 'done' : '', b);
-
-  // 4. usb
-  b = '';
-  if (running('build')) {
-    const m = (job.cur || '').match(/\[(copy|verify) (\d+)\/(\d+)\]/);
-    if (m) b += `<div class="muted">${m[1] === 'copy' ? 'Copying' : 'Verifying'} file ${m[2]} of ${m[3]}</div><progress max="${m[3]}" value="${m[2]}"></progress>`;
-    b += now(job) + `<p class="muted">${S.mac ? 'If macOS asks whether the app may access removable volumes, allow it. At the end it asks for your password to write the boot sector.'
-      : 'Your password is needed to format the stick.'} Don't unplug the stick.</p>`;
-  } else if (built) {
-    b = `<div class="msg ok">Your recovery USB is ready. You can unplug it.</div>
-      <p><b>To restore the laptop</b> (this erases everything on its internal drive):</p>
-      <ol class="boot"><li>Plug the laptop into power and insert the USB stick.</li>
-      <li>Turn it on and tap <b>F12</b> repeatedly, or press the <b>Novo</b> pinhole button and pick <i>Boot Menu</i>.</li>
-      <li>Choose the USB stick. Secure Boot can stay on.</li>
-      <li>Follow the prompts. Leave the stick in until it tells you to remove it.</li></ol>
-      <div class="row"><button class="secondary" data-do="another">Make another stick</button>` +
-      (hasOrder ? `<button class="secondary" data-do="cleanup">Delete the downloaded files (${gb(o.total)})</button>` : '') + `</div>`;
-  } else if (step >= 4) {
-    b = disks.length ? disks.map(d => `<label class="pick ${d.problem ? 'off' : ''}"><input type="radio" name="disk" value="${esc(d.id)}" ${d.problem ? 'disabled' : ''} ${d.id === pickDisk ? 'checked' : ''}>` +
-      `<span><b>${esc(d.name)} · ${gb(d.size)}</b><span class="muted">${esc(d.id)}${d.problem ? ' · ' + esc(d.problem) : ''}</span></span></label>`).join('')
-      : '<p class="muted"><span class="spin"></span>Plug in a USB stick (32 GB or larger)...</p>';
-    const d = disks.find(x => x.id === pickDisk && !x.problem);
-    if (confirming && d) b += `<div class="msg warn">Erase “${esc(d.name)}” (${esc(d.id)}, ${gb(d.size)})? Everything on this USB stick will be deleted.</div>` +
-      `<div class="row"><button class="danger" data-do="erase">Erase and create</button><button class="secondary" data-do="cancel">Cancel</button></div>`;
-    else b += `<div class="row"><button class="danger" data-do="ask" ${off(busy || !d)}>Erase stick and create recovery USB</button></div>`;
-    b += failed('build');
-    if (S.job.name === 'build' && S.job.ok === false && S.job.lines.some(l => l.includes('Files written and verified')))
-      b += `<div class="row"><button data-do="rawfix" ${off(!d)}>Retry the last step</button><span class="muted">The files are already on the stick.</span></div>`;
+  if (done && !doneShown && !modal) {
+    doneShown = true;
+    openModal('done', `<p><b>The recovery USB is ready.</b> You can unplug it.</p><p>To restore the laptop (this erases its internal drive):</p>
+      <ol><li>Plug the laptop into power and insert the stick.</li>
+      <li>Turn it on and tap F12, or press the Novo pinhole button and pick Boot Menu.</li>
+      <li>Choose the USB stick (Secure Boot can stay on) and follow the prompts.</li></ol>`,
+      [['Delete downloaded files', 'cleanup', 'left'], ['OK', 'dismiss']], 'ok');
   }
-  card('s4', 4, 'Create the USB stick', built ? 'done' : st(4), '', b);
-
-  $('err').innerHTML = err ? `<div class="msg bad">${esc(err)}</div>` : '';
-  $('where').innerHTML = `Downloads are kept in <code>${esc(S.dataDir)}</code>`;
-  const pre = $('log').querySelector('pre'), stick = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
-  pre.textContent = job.lines.concat(job.cur ? [job.cur] : []).join('\n') || 'Nothing yet.';
-  if (stick) pre.scrollTop = pre.scrollHeight;
+  if (modal === 'log') {
+    const pre = $('logpre'), stick = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
+    pre.textContent = logText();
+    if (stick) pre.scrollTop = pre.scrollHeight;
+  }
 }
 
-let timer;
+let since = 0;  // elapsed time of the running step, like Rufus's status bar
+setInterval(() => {
+  if (!S) return;
+  if (S.job.running && !since) since = Date.now();
+  if (!S.job.running) since = 0;
+  const t = since ? Math.floor((Date.now() - since) / 1000) : 0;
+  $('clock').textContent = [t / 3600, t / 60 % 60, t % 60].map(x => String(Math.floor(x)).padStart(2, '0')).join(':');
+}, 1000);
+
+let timer, shown = '';
 async function tick() {
   clearTimeout(timer);
   try {
     S = await invoke('status');
-    if (S.ready && !S.job.running && Date.now() - lastDisks > 2500) {
+    if (!S.job.running && Date.now() - lastDisks > 2500) {
       lastDisks = Date.now();
       disks = await invoke('disks');
-      if (!disks.some(d => d.id === pickDisk && !d.problem)) { pickDisk = (disks.find(d => !d.problem) || {}).id || null; confirming = false; }
     }
-    const key = JSON.stringify([S, disks, err, hideDone, confirming]);
+    const key = JSON.stringify([S, disks, err, modal]);
     if (key !== shown) { shown = key; render(); }
   } catch (e) {
-    err = String(e);
-    $('err').innerHTML = `<div class="msg bad">${esc(err)}</div>`;
+    $('status').textContent = String(e);
   }
   timer = setTimeout(tick, S && S.job.running ? 500 : 1500);
 }

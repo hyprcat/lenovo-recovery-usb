@@ -33,18 +33,17 @@ can't verify it. Click *Done*, open **System Settings → Privacy & Security**, 
 
 ## Use it
 
-Follow the four steps in the window:
+The window works like [Rufus](https://rufus.ie):
 
-1. **Sign in** with your Lenovo ID. A Lenovo sign-in window opens and closes by itself once you're signed in.
-2. **Choose your order.**
-3. **Download** about 26 to 30 GB. Every file is checked against Lenovo's SHA-256. If it gets interrupted, click
-   *Resume*.
-4. **Plug in the stick, pick it, and click *Erase stick and create recovery USB*.**
+1. Click **SIGN IN...** and sign in with your Lenovo ID. The sign-in window closes by itself once you're in.
+2. Pick your **Lenovo recovery order** and click **DOWNLOAD** (about 26 to 30 GB). Every file is checked against
+   Lenovo's SHA-256. If it gets interrupted, click **RESUME**.
+3. Plug in the stick, pick it under **Device**, click **START**, then **OK** to erase it.
    - macOS asks once whether the app may access removable volumes (allow it), and asks for your password at the end
      to write the boot sector.
    - Linux asks for your password at the start, to format the stick.
 
-When it's done you can delete the downloaded files from the app. Keep them if you want to make another stick.
+The ⓘ button shows where the downloads are kept and can delete them; the ☰ button shows the full log.
 
 ## Restore the laptop
 
@@ -66,7 +65,7 @@ The stick can be reused. Label it, don't format it, and it will work again next 
 | Download stops with a link or session error | The sign-in lasts about 12 hours. Sign in again and click *Resume*. Finished files are kept. |
 | "Can't build this one yet: … partition(s)" | Your order uses a stick layout this app doesn't support yet. Please [open an issue](https://github.com/hyprcat/lenovo-recovery-usb/issues) with your laptop model. |
 | "not a zip archive" | Same: your order packs its files in a format this app doesn't read yet. Please open an issue. |
-| macOS: "Could not open /dev/rdiskN for writing" | Allow the app under System Settings → Privacy & Security → Files and Folders → *Removable Volumes*, then click *Retry the last step*. |
+| macOS: "Could not open /dev/rdiskN for writing" | Allow the app under System Settings → Privacy & Security → Files and Folders → *Removable Volumes*, then click **RETRY**. |
 | "VERIFY FAILED" | The stick is probably bad or fake-capacity. Try another one. |
 | "stick too small" | Use a bigger stick. |
 | Linux: password prompt never appears | You need a polkit agent (every desktop has one). On a bare window manager, use the command line below with `sudo`. |
