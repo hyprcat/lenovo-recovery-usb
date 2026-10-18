@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recovery USB Maker</title>
+<style>
+:root {
+  --bg: #f5f6f8; --card: #fff; --text: #1c1e21; --muted: #646a73; --line: #e2e5ea;
+  --accent: #2d6cdf; --accent-text: #fff; --ok: #1f8a4c; --warn: #a86400; --bad: #c62f2f; --bar: #e8ebf0;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #15171a; --card: #1e2125; --text: #e8eaed; --muted: #9aa0a8; --line: #2e3238;
+          --accent: #5b8ff0; --accent-text: #0d1117; --ok: #4cc27f; --warn: #e0a440; --bad: #f06a6a; --bar: #2b2f35;
+          color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, Cantarell, sans-serif; }
+main { max-width: 660px; margin: 0 auto; padding: 28px 16px 48px; }
+header { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+header svg { flex: none; }
+h1 { font-size: 20px; margin: 0; }
+.sub { color: var(--muted); font-size: 13px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+.card.locked { opacity: .55; }
+.card.locked .body { display: none; }
+.head { display: flex; align-items: center; gap: 10px; }
+.num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600;
+       border: 1.5px solid var(--line); color: var(--muted); flex: none; }
+.active .num { border-color: var(--accent); color: var(--accent); }
+.done .num { background: var(--ok); border-color: var(--ok); color: var(--card); }
+h2 { font-size: 16px; margin: 0; flex: 1; }
+.chip { font-size: 12px; color: var(--muted); }
+.body { margin: 10px 0 0 36px; }
+p { margin: 0 0 10px; }
+.muted { color: var(--muted); font-size: 13px; }
+a { color: var(--accent); }
+button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 9px 16px; cursor: pointer;
+         background: var(--accent); color: var(--accent-text); }
+button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+button.danger { background: var(--bad); color: #fff; }
+button:disabled { opacity: .45; cursor: default; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.pick { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
+.pick input { margin-top: 4px; }
+.pick.off { cursor: default; opacity: .6; }
+.pick b { display: block; font-weight: 600; }
+.bar { height: 8px; background: var(--bar); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; }
+.bar div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+.msg { border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.bad { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+.msg.warn { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+.msg.ok { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); }
+.now { font: 12px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.4em; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre { font: 12px/1.45 ui-monospace, Menlo, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+      padding: 10px; max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+ol.boot { margin: 6px 0 0; padding-left: 20px; }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
+        border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">
+      <rect x="11" y="3" width="14" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <rect x="7" y="12" width="22" height="21" rx="4" fill="var(--accent)"/>
+      <path d="M18 17v8m-4-4 4 4 4-4" stroke="var(--accent-text)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <h1>Recovery USB Maker</h1>
+      <div class="sub">Make Lenovo factory-recovery media without a Windows PC. Unofficial, not affiliated with Lenovo.</div>
+    </div>
+  </header>
+  <div id="tools"></div>
+  <div id="err"></div>
+  <section class="card" id="s1"></section>
+  <section class="card" id="s2"></section>
+  <section class="card" id="s3"></section>
+  <section class="card" id="s4"></section>
+  <details id="log"><summary>Show details</summary><pre></pre></details>
+  <footer>Keep this window open while a step is running. Downloads resume if interrupted.</footer>
+</main>
+<script>
+const T = location.hash.slice(1);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const gb = n => (n / 1e9).toFixed(1) + ' GB';
+const SITE = 'https://pcsupport.lenovo.com/lenovorecovery';
+let S = null, disks = [], pickOrder = null, pickDisk = null, err = '', lastDisks = 0, shown = '', hideDone = false;
+
+async function api(path, body) {
+  const opt = { headers: { 'X-Token': T } };
+  if (body !== undefined) Object.assign(opt, { method: 'POST', body: JSON.stringify(body) });
+  const r = await fetch('/api/' + path, opt);
+  return r.json();
+}
+async function act(path, body = {}) {
+  err = '';
+  hideDone = false;
+  const r = await api(path, body);
+  if (r.error) err = r.error;
+  tick(true);
+}
+
+function card(id, n, title, state, chip, body) {
+  const el = $(id);
+  el.className = 'card ' + state;
+  el.innerHTML = `<div class="head"><div class="num">${state === 'done' ? '✓' : n}</div><h2>${title}</h2><span class="chip">${chip || ''}</span></div>` +
+    `<div class="body">${body}</div>`;
+}
+function tail(job, n = 4) {
+  return job.lines.filter(l => l.trim()).slice(-n).join('\n');
+}
+function failed(name) { return S.job.name === name && S.job.ok === false ? `<div class="msg bad">${esc(tail(S.job))}</div>` : ''; }
+function running(name) { return S.job.running && S.job.name === name; }
+function now(job) { return `<div class="now"><span class="spin"></span>${esc(job.cur || job.lines[job.lines.length - 1] || 'Working...')}</div>`; }
+
+function render() {
+  const job = S.job, busy = job.running, o = S.order;
+  const hasOrder = o && o.files > 0;
+  const built = job.name === 'build' && job.ok === true && !hideDone;
+
+  $('tools').innerHTML = S.missingTools.length ? `<div class="msg warn">Missing: ${esc(S.missingTools.join(', '))}. Install first: ` +
+    (S.mac ? '<code>brew install sevenzip</code>' :
+      '<code>sudo apt install 7zip dosfstools</code> (Debian/Ubuntu; older: p7zip-full) · <code>sudo dnf install 7zip dosfstools</code> · <code>sudo pacman -S 7zip dosfstools</code>') +
+    '</div>' : '';
+
+  // 1. sign in
+  let b = '';
+  if (running('login')) b = now(job);
+  else if (S.signedIn && S.orders.length) b = `<p>Signed in. Found ${S.orders.length} recovery order${S.orders.length > 1 ? 's' : ''}.</p>` +
+    `<div class="row"><button class="secondary" onclick="act('login')" ${busy ? 'disabled' : ''}>Sign in again</button></div>`;
+  else if (S.ready || hasOrder) b = `<p class="muted">Not needed right now: your order is already here. Sign in only to fetch a different order.</p>` +
+    `<div class="row"><button class="secondary" onclick="act('login')" ${busy ? 'disabled' : ''}>Sign in with Lenovo ID</button></div>`;
+  else {
+    b = `<p>Sign in with the Lenovo ID you used to order recovery media for your laptop.</p>` +
+      `<p class="muted">No order yet? It's free: request one at <a href="${SITE}" target="_blank">${SITE.replace('https://', '')}</a> with the serial number on the bottom of the laptop, then come back and sign in.</p>`;
+    if (S.signedIn && job.name === 'login' && job.ok) b += `<div class="msg warn">This Lenovo ID has no recovery orders yet. Request one at the link above, then sign in again.</div>`;
+    b += `<div class="row"><button onclick="act('login')" ${busy ? 'disabled' : ''}>Sign in with Lenovo ID</button></div>`;
+  }
+  b += failed('login');
+  const step = built ? 5 : S.ready ? 4 : hasOrder ? 3 : S.orders.length ? 2 : 1;
+  const st = n => n < step ? 'done' : n === step ? 'active' : 'locked';
+  card('s1', 1, 'Sign in to Lenovo', S.signedIn && S.orders.length || step > 1 ? 'done' : 'active', '', b);
+
+  // 2. order
+  if (pickOrder === null && S.orders.length) pickOrder = S.orderId || S.orders[0].id;
+  b = S.orders.map(x => `<label class="pick"><input type="radio" name="order" value="${esc(x.id)}" ${x.id === pickOrder ? 'checked' : ''} onchange="pickOrder=this.value; render()">` +
+    `<span><b>${esc(x.machineType)} · serial ${esc(x.serialNumber)}</b><span class="muted">${esc(x.os)} · ordered ${esc((x.dateTime || '').slice(0, 10))}</span></span></label>`).join('');
+  if (!S.orders.length && hasOrder) b = `<p class="muted">Using order ${esc(o.id)}.</p>`;
+  if (running('order')) b += now(job);
+  else if (S.orders.length) b += `<div class="row"><button onclick="act('order', {id: pickOrder})" ${busy ? 'disabled' : ''}>${hasOrder ? 'Reload order' : 'Use this order'}</button></div>`;
+  if (o && o.code !== '000' && !running('order')) b += `<div class="msg bad">Lenovo says: ${esc(o.message)} (code ${esc(o.code)}). The order may have expired or been used up. Request a new one at <a href="${SITE}" target="_blank">Lenovo's recovery site</a>.</div>`;
+  if (S.layoutProblem) b += `<div class="msg bad">Can't build this one yet: ${esc(S.layoutProblem)}. Please open an issue with your laptop model.</div>`;
+  b += failed('order');
+  card('s2', 2, 'Choose your recovery order', st(2), hasOrder ? `${o.files} files · ${gb(o.total)}` : '', b || '<p class="muted">Sign in first.</p>');
+
+  // 3. download
+  b = '';
+  if (hasOrder) {
+    const pct = o.total ? 100 * o.done / o.total : 0, left = o.total - o.done;
+    b += `<div class="bar"><div style="width:${pct.toFixed(1)}%"></div></div><div class="muted">${gb(o.done)} of ${gb(o.total)}` +
+      `${S.ready ? ' · all files verified' : ''}</div>`;
+    if (!S.ready && S.free < left + 1e9) b += `<div class="msg warn">Not enough free disk space: ${gb(left)} still to download, ${gb(S.free)} free.</div>`;
+    if (running('download')) b += now(job);
+    else if (!S.ready) b += `<div class="row"><button onclick="act('download')" ${busy || S.layoutProblem ? 'disabled' : ''}>${o.done ? 'Resume download' : 'Download'}</button>` +
+      `<span class="muted">Every file is checked against Lenovo's SHA-256.</span></div>`;
+  } else if (S.ready) b = '<p>Files already downloaded and verified.</p>';
+  b += failed('download');
+  card('s3', 3, 'Download the recovery files', st(3), S.ready ? 'done' : '', b);
+
+  // 4. usb
+  b = '';
+  if (running('build')) {
+    const m = (job.cur || '').match(/\[(copy|verify) (\d+)\/(\d+)\]/);
+    if (m) b += `<div class="muted">${m[1] === 'copy' ? 'Copying' : 'Verifying'} file ${m[2]} of ${m[3]}</div><div class="bar"><div style="width:${(100 * m[2] / m[3]).toFixed(1)}%"></div></div>`;
+    b += now(job) + `<p class="muted">${S.mac ? 'At the end macOS asks for your password to write the boot sector.' : 'Your password is needed to format the stick.'} Don't unplug the stick.</p>`;
+  } else if (built) {
+    b = `<div class="msg ok">Your recovery USB is ready. You can unplug it.</div>
+      <p><b>To restore the laptop</b> (this erases everything on its internal drive):</p>
+      <ol class="boot"><li>Plug the laptop into power and insert the USB stick.</li>
+      <li>Turn it on and tap <b>F12</b> repeatedly, or press the <b>Novo</b> pinhole button and pick <i>Boot Menu</i>.</li>
+      <li>Choose the USB stick. Secure Boot can stay on.</li>
+      <li>Follow the prompts. Leave the stick in until it tells you to remove it.</li></ol>
+      <div class="row"><button class="secondary" onclick="hideDone = true; render()">Make another stick</button></div>`;
+  } else if (step >= 4) {
+    b = disks.length ? disks.map(d => `<label class="pick ${d.problem ? 'off' : ''}"><input type="radio" name="disk" value="${esc(d.id)}" ${d.problem ? 'disabled' : ''} ${d.id === pickDisk ? 'checked' : ''} onchange="pickDisk=this.value; render()">` +
+      `<span><b>${esc(d.name)} · ${gb(d.size)}</b><span class="muted">${esc(d.id)}${d.problem ? ' · ' + esc(d.problem) : ''}</span></span></label>`).join('')
+      : '<p class="muted"><span class="spin"></span>Plug in a USB stick (32 GB or larger)...</p>';
+    const d = disks.find(x => x.id === pickDisk && !x.problem);
+    b += `<div class="row"><button class="danger" onclick="build()" ${busy || !d ? 'disabled' : ''}>Erase stick and create recovery USB</button></div>`;
+    b += failed('build');
+    if (S.job.name === 'build' && S.job.ok === false && S.job.lines.some(l => l.includes('Files written and verified')))
+      b += `<div class="row"><button onclick="act('rawfix', {disk: pickDisk})" ${!d ? 'disabled' : ''}>Retry the last step</button><span class="muted">The files are already on the stick.</span></div>`;
+  }
+  card('s4', 4, 'Create the USB stick', built ? 'done' : st(4), '', b);
+
+  $('err').innerHTML = err ? `<div class="msg bad">${esc(err)}</div>` : '';
+  const pre = $('log').querySelector('pre'), stick = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
+  pre.textContent = job.lines.concat(job.cur ? [job.cur] : []).join('\n') || 'Nothing yet.';
+  if (stick) pre.scrollTop = pre.scrollHeight;
+}
+
+function build() {
+  const d = disks.find(x => x.id === pickDisk);
+  if (d && confirm(`Erase "${d.name}" (${d.id}, ${gb(d.size)})?\n\nEverything on this USB stick will be deleted.`)) act('build', { disk: d.id });
+}
+
+let timer;
+async function tick(soon) {
+  clearTimeout(timer);
+  try {
+    S = await api('status');
+    if (S.ready && !S.job.running && Date.now() - lastDisks > 2500) {
+      lastDisks = Date.now();
+      disks = await api('disks');
+      if (!disks.some(d => d.id === pickDisk && !d.problem)) pickDisk = (disks.find(d => !d.problem) || {}).id || null;
+    }
+    const key = JSON.stringify([S, disks, err, hideDone]);
+    if (key !== shown) { shown = key; render(); }
+  } catch (e) {
+    document.querySelector('footer').textContent = 'Lost connection to the app. Restart it with: python3 app.py';
+    return;
+  }
+  timer = setTimeout(tick, S.job.running ? 500 : 1500);
+}
+tick();
+</script>
+</body>
+</html>
