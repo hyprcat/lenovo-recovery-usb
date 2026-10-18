@@ -46,8 +46,9 @@ button:disabled { opacity: .45; cursor: default; }
 .pick input { margin-top: 4px; }
 .pick.off { cursor: default; opacity: .6; }
 .pick b { display: block; font-weight: 600; }
-.bar { height: 8px; background: var(--bar); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; }
-.bar div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+progress { display: block; width: 100%; height: 8px; margin: 8px 0 4px; appearance: none; border: 0; border-radius: 4px; overflow: hidden; background: var(--bar); }
+progress::-webkit-progress-bar { background: var(--bar); }
+progress::-webkit-progress-value { background: var(--accent); }
 .msg { border-radius: 8px; padding: 9px 12px; margin: 10px 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg.bad { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
 .msg.warn { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
@@ -61,7 +62,8 @@ ol.boot { margin: 6px 0 0; padding-left: 20px; }
 .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent);
         border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -1px; margin-right: 6px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
+footer { color: var(--muted); font-size: 12px; margin-top: 24px; overflow-wrap: anywhere; }
+code { font: 12px ui-monospace, Menlo, monospace; background: var(--bar); padding: 1px 5px; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -84,30 +86,51 @@ footer { color: var(--muted); font-size: 12px; margin-top: 24px; }
   <section class="card" id="s3"></section>
   <section class="card" id="s4"></section>
   <details id="log"><summary>Show details</summary><pre></pre></details>
-  <footer>Keep this window open while a step is running. Downloads resume if interrupted.</footer>
+  <footer>Keep this window open while a step is running. Downloads resume if interrupted.<br><span id="where"></span></footer>
 </main>
 <script>
-const T = location.hash.slice(1);
+const invoke = window.__TAURI__.core.invoke;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
 const gb = n => (n / 1e9).toFixed(1) + ' GB';
 const SITE = 'https://pcsupport.lenovo.com/lenovorecovery';
-let S = null, disks = [], pickOrder = null, pickDisk = null, err = '', lastDisks = 0, shown = '', hideDone = false;
+const ISSUES = 'https://github.com/hyprcat/lenovo-recovery-usb/issues';
+let S = null, disks = [], pickOrder = null, pickDisk = null, err = '', lastDisks = 0, shown = '', hideDone = false, confirming = false;
 
-async function api(path, body) {
-  const opt = { headers: { 'X-Token': T } };
-  if (body !== undefined) Object.assign(opt, { method: 'POST', body: JSON.stringify(body) });
-  const r = await fetch('/api/' + path, opt);
-  return r.json();
-}
-async function act(path, body = {}) {
+async function act(name, arg) {
   err = '';
   hideDone = false;
-  const r = await api(path, body);
-  if (r.error) err = r.error;
-  tick(true);
+  confirming = false;
+  try { await invoke('act', { name, arg }); } catch (e) { err = String(e); }
+  tick();
 }
 
+// buttons and links carry data-do / data-href; one listener each instead of inline handlers (CSP)
+const DO = {
+  login: () => act('login'),
+  order: () => act('order', pickOrder),
+  download: () => act('download'),
+  ask: () => { confirming = true; render(); },
+  cancel: () => { confirming = false; render(); },
+  erase: () => act('build', pickDisk),
+  rawfix: () => act('rawfix', pickDisk),
+  cleanup: () => act('cleanup'),
+  another: () => { hideDone = true; render(); },
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-do],[data-href]');
+  if (!b || b.disabled) return;
+  e.preventDefault();
+  if (b.dataset.href) invoke('open_url', { url: b.dataset.href });
+  else DO[b.dataset.do]();
+});
+document.addEventListener('change', e => {
+  if (e.target.name === 'order') pickOrder = e.target.value;
+  if (e.target.name === 'disk') { pickDisk = e.target.value; confirming = false; }
+  render();
+});
+
+const link = (url, text) => `<a href="${url}" data-href="${url}">${text}</a>`;
 function card(id, n, title, state, chip, body) {
   const el = $(id);
   el.className = 'card ' + state;
@@ -120,29 +143,29 @@ function tail(job, n = 4) {
 function failed(name) { return S.job.name === name && S.job.ok === false ? `<div class="msg bad">${esc(tail(S.job))}</div>` : ''; }
 function running(name) { return S.job.running && S.job.name === name; }
 function now(job) { return `<div class="now"><span class="spin"></span>${esc(job.cur || job.lines[job.lines.length - 1] || 'Working...')}</div>`; }
+const off = cond => cond ? 'disabled' : '';
 
 function render() {
   const job = S.job, busy = job.running, o = S.order;
   const hasOrder = o && o.files > 0;
   const built = job.name === 'build' && job.ok === true && !hideDone;
 
-  $('tools').innerHTML = S.missingTools.length ? `<div class="msg warn">Missing: ${esc(S.missingTools.join(', '))}. Install first: ` +
-    (S.mac ? '<code>brew install sevenzip</code>' :
-      '<code>sudo apt install 7zip dosfstools</code> (Debian/Ubuntu; older: p7zip-full) · <code>sudo dnf install 7zip dosfstools</code> · <code>sudo pacman -S 7zip dosfstools</code>') +
-    '</div>' : '';
+  $('tools').innerHTML = S.missingTools.length ? `<div class="msg warn">Missing: ${esc(S.missingTools.join(', '))}. Install them first: ` +
+    '<code>sudo apt install dosfstools util-linux pkexec</code> · <code>sudo dnf install dosfstools util-linux polkit</code> · ' +
+    '<code>sudo pacman -S dosfstools util-linux polkit</code></div>' : '';
 
   // 1. sign in
   let b = '';
   if (running('login')) b = now(job);
   else if (S.signedIn && S.orders.length) b = `<p>Signed in. Found ${S.orders.length} recovery order${S.orders.length > 1 ? 's' : ''}.</p>` +
-    `<div class="row"><button class="secondary" onclick="act('login')" ${busy ? 'disabled' : ''}>Sign in again</button></div>`;
+    `<div class="row"><button class="secondary" data-do="login" ${off(busy)}>Sign in again</button></div>`;
   else if (S.ready || hasOrder) b = `<p class="muted">Not needed right now: your order is already here. Sign in only to fetch a different order.</p>` +
-    `<div class="row"><button class="secondary" onclick="act('login')" ${busy ? 'disabled' : ''}>Sign in with Lenovo ID</button></div>`;
+    `<div class="row"><button class="secondary" data-do="login" ${off(busy)}>Sign in with Lenovo ID</button></div>`;
   else {
     b = `<p>Sign in with the Lenovo ID you used to order recovery media for your laptop.</p>` +
-      `<p class="muted">No order yet? It's free: request one at <a href="${SITE}" target="_blank">${SITE.replace('https://', '')}</a> with the serial number on the bottom of the laptop, then come back and sign in.</p>`;
+      `<p class="muted">No order yet? It's free: request one at ${link(SITE, SITE.replace('https://', ''))} with the serial number on the bottom of the laptop, then come back and sign in.</p>`;
     if (S.signedIn && job.name === 'login' && job.ok) b += `<div class="msg warn">This Lenovo ID has no recovery orders yet. Request one at the link above, then sign in again.</div>`;
-    b += `<div class="row"><button onclick="act('login')" ${busy ? 'disabled' : ''}>Sign in with Lenovo ID</button></div>`;
+    b += `<div class="row"><button data-do="login" ${off(busy)}>Sign in with Lenovo ID</button></div>`;
   }
   b += failed('login');
   const step = built ? 5 : S.ready ? 4 : hasOrder ? 3 : S.orders.length ? 2 : 1;
@@ -151,13 +174,13 @@ function render() {
 
   // 2. order
   if (pickOrder === null && S.orders.length) pickOrder = S.orderId || S.orders[0].id;
-  b = S.orders.map(x => `<label class="pick"><input type="radio" name="order" value="${esc(x.id)}" ${x.id === pickOrder ? 'checked' : ''} onchange="pickOrder=this.value; render()">` +
+  b = S.orders.map(x => `<label class="pick"><input type="radio" name="order" value="${esc(x.id)}" ${x.id === pickOrder ? 'checked' : ''}>` +
     `<span><b>${esc(x.machineType)} · serial ${esc(x.serialNumber)}</b><span class="muted">${esc(x.os)} · ordered ${esc((x.dateTime || '').slice(0, 10))}</span></span></label>`).join('');
   if (!S.orders.length && hasOrder) b = `<p class="muted">Using order ${esc(o.id)}.</p>`;
   if (running('order')) b += now(job);
-  else if (S.orders.length) b += `<div class="row"><button onclick="act('order', {id: pickOrder})" ${busy ? 'disabled' : ''}>${hasOrder ? 'Reload order' : 'Use this order'}</button></div>`;
-  if (o && o.code !== '000' && !running('order')) b += `<div class="msg bad">Lenovo says: ${esc(o.message)} (code ${esc(o.code)}). The order may have expired or been used up. Request a new one at <a href="${SITE}" target="_blank">Lenovo's recovery site</a>.</div>`;
-  if (S.layoutProblem) b += `<div class="msg bad">Can't build this one yet: ${esc(S.layoutProblem)}. Please open an issue with your laptop model.</div>`;
+  else if (S.orders.length) b += `<div class="row"><button data-do="order" ${off(busy)}>${hasOrder ? 'Reload order' : 'Use this order'}</button></div>`;
+  if (o && o.code !== '000' && !running('order')) b += `<div class="msg bad">Lenovo says: ${esc(o.message)} (code ${esc(o.code)}). The order may have expired or been used up. Request a new one at ${link(SITE, "Lenovo's recovery site")}.</div>`;
+  if (S.layoutProblem) b += `<div class="msg bad">Can't build this one yet: ${esc(S.layoutProblem)}. Please ${link(ISSUES, 'open an issue')} with your laptop model.</div>`;
   b += failed('order');
   card('s2', 2, 'Choose your recovery order', st(2), hasOrder ? `${o.files} files · ${gb(o.total)}` : '', b || '<p class="muted">Sign in first.</p>');
 
@@ -165,22 +188,23 @@ function render() {
   b = '';
   if (hasOrder) {
     const pct = o.total ? 100 * o.done / o.total : 0, left = o.total - o.done;
-    b += `<div class="bar"><div style="width:${pct.toFixed(1)}%"></div></div><div class="muted">${gb(o.done)} of ${gb(o.total)}` +
+    b += `<progress max="100" value="${pct.toFixed(1)}"></progress><div class="muted">${gb(o.done)} of ${gb(o.total)}` +
       `${S.ready ? ' · all files verified' : ''}</div>`;
     if (!S.ready && S.free < left + 1e9) b += `<div class="msg warn">Not enough free disk space: ${gb(left)} still to download, ${gb(S.free)} free.</div>`;
     if (running('download')) b += now(job);
-    else if (!S.ready) b += `<div class="row"><button onclick="act('download')" ${busy || S.layoutProblem ? 'disabled' : ''}>${o.done ? 'Resume download' : 'Download'}</button>` +
+    else if (!S.ready) b += `<div class="row"><button data-do="download" ${off(busy || S.layoutProblem)}>${o.done ? 'Resume download' : 'Download'}</button>` +
       `<span class="muted">Every file is checked against Lenovo's SHA-256.</span></div>`;
   } else if (S.ready) b = '<p>Files already downloaded and verified.</p>';
-  b += failed('download');
+  b += failed('download') + failed('cleanup');
   card('s3', 3, 'Download the recovery files', st(3), S.ready ? 'done' : '', b);
 
   // 4. usb
   b = '';
   if (running('build')) {
     const m = (job.cur || '').match(/\[(copy|verify) (\d+)\/(\d+)\]/);
-    if (m) b += `<div class="muted">${m[1] === 'copy' ? 'Copying' : 'Verifying'} file ${m[2]} of ${m[3]}</div><div class="bar"><div style="width:${(100 * m[2] / m[3]).toFixed(1)}%"></div></div>`;
-    b += now(job) + `<p class="muted">${S.mac ? 'At the end macOS asks for your password to write the boot sector.' : 'Your password is needed to format the stick.'} Don't unplug the stick.</p>`;
+    if (m) b += `<div class="muted">${m[1] === 'copy' ? 'Copying' : 'Verifying'} file ${m[2]} of ${m[3]}</div><progress max="${m[3]}" value="${m[2]}"></progress>`;
+    b += now(job) + `<p class="muted">${S.mac ? 'If macOS asks whether the app may access removable volumes, allow it. At the end it asks for your password to write the boot sector.'
+      : 'Your password is needed to format the stick.'} Don't unplug the stick.</p>`;
   } else if (built) {
     b = `<div class="msg ok">Your recovery USB is ready. You can unplug it.</div>
       <p><b>To restore the laptop</b> (this erases everything on its internal drive):</p>
@@ -188,47 +212,46 @@ function render() {
       <li>Turn it on and tap <b>F12</b> repeatedly, or press the <b>Novo</b> pinhole button and pick <i>Boot Menu</i>.</li>
       <li>Choose the USB stick. Secure Boot can stay on.</li>
       <li>Follow the prompts. Leave the stick in until it tells you to remove it.</li></ol>
-      <div class="row"><button class="secondary" onclick="hideDone = true; render()">Make another stick</button></div>`;
+      <div class="row"><button class="secondary" data-do="another">Make another stick</button>` +
+      (hasOrder ? `<button class="secondary" data-do="cleanup">Delete the downloaded files (${gb(o.total)})</button>` : '') + `</div>`;
   } else if (step >= 4) {
-    b = disks.length ? disks.map(d => `<label class="pick ${d.problem ? 'off' : ''}"><input type="radio" name="disk" value="${esc(d.id)}" ${d.problem ? 'disabled' : ''} ${d.id === pickDisk ? 'checked' : ''} onchange="pickDisk=this.value; render()">` +
+    b = disks.length ? disks.map(d => `<label class="pick ${d.problem ? 'off' : ''}"><input type="radio" name="disk" value="${esc(d.id)}" ${d.problem ? 'disabled' : ''} ${d.id === pickDisk ? 'checked' : ''}>` +
       `<span><b>${esc(d.name)} · ${gb(d.size)}</b><span class="muted">${esc(d.id)}${d.problem ? ' · ' + esc(d.problem) : ''}</span></span></label>`).join('')
       : '<p class="muted"><span class="spin"></span>Plug in a USB stick (32 GB or larger)...</p>';
     const d = disks.find(x => x.id === pickDisk && !x.problem);
-    b += `<div class="row"><button class="danger" onclick="build()" ${busy || !d ? 'disabled' : ''}>Erase stick and create recovery USB</button></div>`;
+    if (confirming && d) b += `<div class="msg warn">Erase “${esc(d.name)}” (${esc(d.id)}, ${gb(d.size)})? Everything on this USB stick will be deleted.</div>` +
+      `<div class="row"><button class="danger" data-do="erase">Erase and create</button><button class="secondary" data-do="cancel">Cancel</button></div>`;
+    else b += `<div class="row"><button class="danger" data-do="ask" ${off(busy || !d)}>Erase stick and create recovery USB</button></div>`;
     b += failed('build');
     if (S.job.name === 'build' && S.job.ok === false && S.job.lines.some(l => l.includes('Files written and verified')))
-      b += `<div class="row"><button onclick="act('rawfix', {disk: pickDisk})" ${!d ? 'disabled' : ''}>Retry the last step</button><span class="muted">The files are already on the stick.</span></div>`;
+      b += `<div class="row"><button data-do="rawfix" ${off(!d)}>Retry the last step</button><span class="muted">The files are already on the stick.</span></div>`;
   }
   card('s4', 4, 'Create the USB stick', built ? 'done' : st(4), '', b);
 
   $('err').innerHTML = err ? `<div class="msg bad">${esc(err)}</div>` : '';
+  $('where').innerHTML = `Downloads are kept in <code>${esc(S.dataDir)}</code>`;
   const pre = $('log').querySelector('pre'), stick = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 4;
   pre.textContent = job.lines.concat(job.cur ? [job.cur] : []).join('\n') || 'Nothing yet.';
   if (stick) pre.scrollTop = pre.scrollHeight;
 }
 
-function build() {
-  const d = disks.find(x => x.id === pickDisk);
-  if (d && confirm(`Erase "${d.name}" (${d.id}, ${gb(d.size)})?\n\nEverything on this USB stick will be deleted.`)) act('build', { disk: d.id });
-}
-
 let timer;
-async function tick(soon) {
+async function tick() {
   clearTimeout(timer);
   try {
-    S = await api('status');
+    S = await invoke('status');
     if (S.ready && !S.job.running && Date.now() - lastDisks > 2500) {
       lastDisks = Date.now();
-      disks = await api('disks');
-      if (!disks.some(d => d.id === pickDisk && !d.problem)) pickDisk = (disks.find(d => !d.problem) || {}).id || null;
+      disks = await invoke('disks');
+      if (!disks.some(d => d.id === pickDisk && !d.problem)) { pickDisk = (disks.find(d => !d.problem) || {}).id || null; confirming = false; }
     }
-    const key = JSON.stringify([S, disks, err, hideDone]);
+    const key = JSON.stringify([S, disks, err, hideDone, confirming]);
     if (key !== shown) { shown = key; render(); }
   } catch (e) {
-    document.querySelector('footer').textContent = 'Lost connection to the app. Restart it with: python3 app.py';
-    return;
+    err = String(e);
+    $('err').innerHTML = `<div class="msg bad">${esc(err)}</div>`;
   }
-  timer = setTimeout(tick, S.job.running ? 500 : 1500);
+  timer = setTimeout(tick, S && S.job.running ? 500 : 1500);
 }
 tick();
 </script>

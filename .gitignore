@@ -1,5 +1,9 @@
+# personal: sign-in tokens, order, downloads, Lenovo's files
 work/
 assets/
 USBRecoveryCreator.exe
-__pycache__/
+
+node_modules/
+src-tauri/target/
+src-tauri/gen/
 .DS_Store

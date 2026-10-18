@@ -1,0 +1,11 @@
+{
+  "name": "recovery-usb-maker",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.3"
+  }
+}
